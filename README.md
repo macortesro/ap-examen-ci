@@ -66,7 +66,9 @@ Sube artefactos JUnit de target/surefire-reports.
 ![Imagen 22](docs/img/22.png)
 ![Imagen 23](docs/img/23.png)
 ![Imagen 24](docs/img/24.png)
+![Imagen 27](docs/img/27.png)
 ![Imagen 25](docs/img/25.png)
 
 ![Imagen 26](docs/img/26.png)
+
 ---
