@@ -19,30 +19,30 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
           cache: maven
-      - name: Build app
+      - name: Build & Package
         run: mvn -B -U -ntp clean package -DskipTests
-
-      - name: Build candidate image
-        run: |
-          docker build \
-            -t $IMAGE_NAME:$VERSION \
-            --build-arg APP_VERSION="${VERSION}" \
-            -f deploy/Dockerfile deploy
+      - name: Save JAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-jar
+          path: target/*.jar
 
   acceptance:
     runs-on: ubuntu-latest
     needs: build-and-package
     steps:
       - uses: actions/checkout@v4
-      - name: Build candidate image again
-        run: docker build -t $IMAGE_NAME:$VERSION -f deploy/Dockerfile deploy
-
+      - name: Download JAR artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-jar
+          path: target
+      - name: Build candidate image
+        run: docker build -t $IMAGE_NAME:$VERSION -f Dockerfile .
       - name: Run BLUE (stable) on 8080
-        run: docker run -d --name blue -p 8080:8080 $IMAGE_NAME:$VERSION || true
-
+        run: docker run -d -p 8080:8080 --name blue $IMAGE_NAME:$VERSION || true
       - name: Run GREEN (candidate) on 8081
-        run: docker run -d --name green -p 8081:8080 $IMAGE_NAME:$VERSION
-
+        run: docker run -d -p 8081:8080 --name green $IMAGE_NAME:$VERSION
       - name: Acceptance tests against GREEN
         run: |
           echo "Probando entorno GREEN..."
@@ -61,8 +61,6 @@ jobs:
           docker stop blue || true
           docker rm blue || true
           docker rename green blue
-          echo "Promoción completada."
-
       - name: Rollback if GREEN failed
         if: failure()
         run: |
