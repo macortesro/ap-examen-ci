@@ -37,11 +37,6 @@ Sube artefactos JUnit de target/surefire-reports.
 
 ## Evidencias
 
-
-![Imagen 1](docs/img/1.png)
-![Imagen 2](docs/img/2.png)
-![Imagen 3](docs/img/3.png)
-![Imagen 4](docs/img/4.png)
 ![Imagen 5](docs/img/5.png)
 
 ![Imagen 6](docs/img/6.png)
