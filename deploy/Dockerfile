@@ -1,10 +1,14 @@
-# deploy/Dockerfile
-FROM nginx:alpine
+FROM openjdk:17-jdk-slim
 
+WORKDIR /app
+
+# ARG para versionado desde GitHub Actions
 ARG APP_VERSION=dev
+ENV APP_VERSION=${APP_VERSION}
 
-RUN echo "${APP_VERSION}" > /usr/share/nginx/html/version.txt
+# Copiar el JAR desde target
+COPY target/*.jar app.jar
 
-RUN printf '<html><body><h1>App Demo</h1><p>Version: ' > /usr/share/nginx/html/index.html \
- && cat /usr/share/nginx/html/version.txt >> /usr/share/nginx/html/index.html \
- && printf '</p></body></html>' >> /usr/share/nginx/html/index.html
+EXPOSE 8080
+
+ENTRYPOINT ["java", "-jar", "app.jar"]

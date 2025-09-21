@@ -51,41 +51,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Package JAR
-        run: mvn -B -U -ntp clean package -DskipTests
-
+      # Construir imagen Docker del candidato
       - name: Build candidate image
         run: docker build -t $IMAGE_NAME:$VERSION .
 
+      # Simular despliegue Blue (8080)
       - name: Run BLUE (stable) on 8080
         run: docker run -d -p 8080:8080 --name blue $IMAGE_NAME:$VERSION || true
 
+      # Simular despliegue Green (8081)
       - name: Run GREEN (candidate) on 8081
         run: docker run -d -p 8081:8080 --name green $IMAGE_NAME:$VERSION
 
+      # Probar el contenedor Green
       - name: Acceptance tests against GREEN
         run: |
           echo "Probando entorno GREEN..."
+          sleep 5
           curl --fail http://localhost:8081 || exit 1
-
-  promote-or-rollback:
-    runs-on: ubuntu-latest
-    needs: acceptance
-    if: always()
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Promote if GREEN passed
-        if: success()
-        run: |
-          echo "✅ GREEN pasó pruebas, promoviendo a producción (8080)..."
-          docker stop blue || true
-          docker rm blue || true
-          docker rename green blue
-
-      - name: Rollback if GREEN failed
-        if: failure()
-        run: |
-          echo "⚠️ GREEN falló, rollback al BLUE estable"
-          docker stop green || true
-          docker rm green || true

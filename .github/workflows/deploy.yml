@@ -3,7 +3,11 @@ name: CD - Deploy a Test (Blue/Green + Rollback)
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
+    branches: [ main ]  
+
+env:
+  IMAGE_NAME: app-candidate
+  VERSION: ${{ github.sha }}
 
 jobs:
   build-and-package:
@@ -18,34 +22,32 @@ jobs:
       - name: Build app
         run: mvn -B -U -ntp clean package -DskipTests
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-jar
-          path: target/*.jar
-
-      - name: Save candidate tag
-        id: meta
-        run: echo "short_sha=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+      - name: Build candidate image
+        run: |
+          docker build \
+            -t $IMAGE_NAME:$VERSION \
+            --build-arg APP_VERSION="${VERSION}" \
+            -f deploy/Dockerfile deploy
 
   acceptance:
     runs-on: ubuntu-latest
     needs: build-and-package
     steps:
       - uses: actions/checkout@v4
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: app-jar
-          path: target
-      - name: Build candidate image
-        run: docker build -t app-candidate:${{ needs.build-and-package.outputs.short_sha }} .
+      - name: Build candidate image again
+        run: docker build -t $IMAGE_NAME:$VERSION -f deploy/Dockerfile deploy
+
       - name: Run BLUE (stable) on 8080
-        run: docker run -d --name blue -p 8080:8080 app-candidate:${{ needs.build-and-package.outputs.short_sha }} || true
+        run: docker run -d --name blue -p 8080:8080 $IMAGE_NAME:$VERSION || true
+
       - name: Run GREEN (candidate) on 8081
-        run: docker run -d --name green -p 8081:8080 app-candidate:${{ needs.build-and-package.outputs.short_sha }}
+        run: docker run -d --name green -p 8081:8080 $IMAGE_NAME:$VERSION
+
       - name: Acceptance tests against GREEN
-        run: curl --fail http://localhost:8081 || exit 1
+        run: |
+          echo "Probando entorno GREEN..."
+          sleep 5
+          curl --fail http://localhost:8081 || exit 1
 
   promote-or-rollback:
     runs-on: ubuntu-latest
@@ -55,13 +57,15 @@ jobs:
       - name: Promote if GREEN passed
         if: success()
         run: |
-          echo "✅ Promoviendo GREEN -> BLUE"
+          echo "✅ GREEN pasó pruebas, promoviendo a producción (8080)..."
           docker stop blue || true
           docker rm blue || true
           docker rename green blue
+          echo "Promoción completada."
+
       - name: Rollback if GREEN failed
         if: failure()
         run: |
-          echo "⛔ GREEN falló, rollback al BLUE estable"
+          echo "⚠️ GREEN falló, rollback al BLUE estable"
           docker stop green || true
           docker rm green || true
