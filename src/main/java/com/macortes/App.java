@@ -6,6 +6,16 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 
 public class App {
+
+    // Métodos requeridos por los tests
+    public static int suma(int a, int b) {
+        return a + b;
+    }
+
+    public static int resta(int a, int b) {
+        return a - b;
+    }
+
     public static void main(String[] args) throws Exception {
         int port = 8080;
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
@@ -20,7 +30,7 @@ public class App {
         server.setExecutor(null);
         server.start();
         System.out.println("HTTP server listening on http://0.0.0.0:" + port);
-        // Mantener vivo el proceso
-        Thread.currentThread().join();
+
+        Thread.currentThread().join(); // Mantener vivo
     }
 }
