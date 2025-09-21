@@ -1,13 +1,14 @@
-FROM openjdk:17-jdk-slim
+# ---------- build ----------
+FROM maven:3.9.7-eclipse-temurin-17 AS build
+WORKDIR /build
+COPY pom.xml .
+COPY src ./src
+RUN mvn -q -DskipTests package
 
-# Directorio de trabajo dentro del contenedor
+# ---------- run ----------
+FROM eclipse-temurin:17-jre-jammy
 WORKDIR /app
-
-# Copiar el JAR generado por Maven
-COPY target/*.jar app.jar
-
-# Exponer el puerto (Spring Boot/Java usa 8080)
+# copiamos el único jar generado (SNAPSHOT o versionado)
+COPY --from=build /build/target/*.jar /app/app.jar
 EXPOSE 8080
-
-# Comando para ejecutar la aplicación
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java","-jar","/app/app.jar"]

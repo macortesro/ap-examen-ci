@@ -3,7 +3,7 @@ name: CD - Deploy a Test (Blue/Green + Rollback)
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]  
+    branches: [ main ]
 
 env:
   IMAGE_NAME: app-candidate
@@ -19,35 +19,43 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
           cache: maven
-      - name: Build & Package
-        run: mvn -B -U -ntp clean package -DskipTests
-      - name: Save JAR artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-jar
-          path: target/*.jar
+
+      - name: Build & tests
+        run: mvn -B -U -ntp clean verify
+
+      - name: Build candidate image (multi-stage)
+        run: docker build -t $IMAGE_NAME:$VERSION .
 
   acceptance:
     runs-on: ubuntu-latest
     needs: build-and-package
     steps:
       - uses: actions/checkout@v4
-      - name: Download JAR artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: app-jar
-          path: target
-      - name: Build candidate image
-        run: docker build -t $IMAGE_NAME:$VERSION -f Dockerfile .
+
+      - name: Clean old containers (if any)
+        run: |
+          docker rm -f blue  || true
+          docker rm -f green || true
+
       - name: Run BLUE (stable) on 8080
-        run: docker run -d -p 8080:8080 --name blue $IMAGE_NAME:$VERSION || true
+        run: docker run -d --name blue  -p 8080:8080 $IMAGE_NAME:$VERSION
+
       - name: Run GREEN (candidate) on 8081
-        run: docker run -d -p 8081:8080 --name green $IMAGE_NAME:$VERSION
+        run: docker run -d --name green -p 8081:8080 $IMAGE_NAME:$VERSION
+
+      - name: Wait for GREEN to be ready
+        run: |
+          for i in {1..30}; do
+            if curl -fsS http://localhost:8081/ > /dev/null; then
+              echo "GREEN is ready"; exit 0
+            fi
+            echo "Waiting GREEN ($i)..."; sleep 1
+          done
+          echo "GREEN did not become ready in time"; exit 1
+
       - name: Acceptance tests against GREEN
         run: |
-          echo "Probando entorno GREEN..."
-          sleep 5
-          curl --fail http://localhost:8081 || exit 1
+          curl -fsS http://localhost:8081/ | tee /dev/stderr | grep -q "OK"
 
   promote-or-rollback:
     runs-on: ubuntu-latest
@@ -55,15 +63,15 @@ jobs:
     if: always()
     steps:
       - name: Promote if GREEN passed
-        if: success()
+        if: needs.acceptance.result == 'success'
         run: |
           echo "✅ GREEN pasó pruebas, promoviendo a producción (8080)..."
-          docker stop blue || true
-          docker rm blue || true
+          docker rm -f blue || true
           docker rename green blue
+          docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Ports}}'
+
       - name: Rollback if GREEN failed
-        if: failure()
+        if: needs.acceptance.result != 'success'
         run: |
-          echo "⚠️ GREEN falló, rollback al BLUE estable"
-          docker stop green || true
-          docker rm green || true
+          echo "⚠️  GREEN falló; se mantiene BLUE y se descarta GREEN."
+          docker rm -f green || true
