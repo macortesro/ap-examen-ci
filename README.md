@@ -26,6 +26,11 @@ git checkout -b feature/ci-setup
 git add .
 git commit -m "ci: proyecto maven + tests + workflow"
 git push -u origin feature/ci-setup
+git push -u origin feature/test-change
+git commit -m
+git push
+
+
 
 ```
 
@@ -58,4 +63,10 @@ Sube artefactos JUnit de target/surefire-reports.
 ![Imagen 20](docs/img/20.png)
 
 ![Imagen 21](docs/img/21.png)
+![Imagen 22](docs/img/22.png)
+![Imagen 23](docs/img/23.png)
+![Imagen 24](docs/img/24.png)
+![Imagen 25](docs/img/25.png)
+
+![Imagen 26](docs/img/26.png)
 ---
