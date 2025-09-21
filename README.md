@@ -37,9 +37,25 @@ Sube artefactos JUnit de target/surefire-reports.
 
 ## Evidencias
 
+![Imagen 5](docs/img/5.png)
 
-![CI OK](docs/img/ci-ok.png)
+![Imagen 6](docs/img/6.png)
+![Imagen 7](docs/img/7.png)
+![Imagen 8](docs/img/8.png)
+![Imagen 9](docs/img/9.png)
+![Imagen 10](docs/img/10.png)
 
+![Imagen 11](docs/img/11.png)
+![Imagen 12](docs/img/12.png)
+![Imagen 13](docs/img/13.png)
+![Imagen 14](docs/img/14.png)
+![Imagen 15](docs/img/15.png)
+
+![Imagen 16](docs/img/16.png)
+![Imagen 17](docs/img/17.png)
+![Imagen 18](docs/img/18.png)
+![Imagen 19](docs/img/19.png)
+![Imagen 20](docs/img/20.png)
+
+![Imagen 21](docs/img/21.png)
 ---
-
-## Commit y push a GitHub
