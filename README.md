@@ -40,6 +40,19 @@ Se ejecuta en push y pull_request.
 
 Sube artefactos JUnit de target/surefire-reports.
 
+## Deployment (Blue/Green + Rollback)
+
+- **Artefacto**: Imagen Docker (NGINX) que publica `version.txt` con el identificador de build (SHA).
+- **Blue/Green**:
+  - **Blue** (estable) corre en `:8080` con versión `stable`.
+  - **Green** (candidato) corre en `:8081` con versión `<SHA>`.
+- **Acceptance tests**: `scripts/acceptance.sh` valida que `http://localhost:8081/version.txt` devuelva la versión esperada.
+- **Promoción / Rollback**:
+  - Si Acceptance pasa se promueve Green (simulado), sustituyendo Blue.
+  - Si falla → se apaga Green y Blue permanece (rollback).
+- **Workflow**: `.github/workflows/deploy.yml`
+
+
 ## Evidencias
 
 ![Imagen 5](docs/img/5.png)

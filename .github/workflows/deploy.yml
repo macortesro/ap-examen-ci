@@ -3,7 +3,7 @@ name: CD - Deploy a Test (Blue/Green + Rollback)
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]  
+    branches: [ main ]
 
 jobs:
   build-and-package:
@@ -18,56 +18,50 @@ jobs:
       - name: Build app
         run: mvn -B -U -ntp clean package -DskipTests
 
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-jar
+          path: target/*.jar
 
-      - name: Build & Unit+Integration tests
-        run: |
-          mvn -B -U -ntp clean verify
-
-      - name: Build candidate image
-        run: |
-          SHORT_SHA="${GITHUB_SHA::7}"
-          docker build \
-            -t app-candidate:${SHORT_SHA} \
-            --build-arg APP_VERSION="${SHORT_SHA}" \
-            -f deploy/Dockerfile deploy
-
-      - name: Save candidate tag for next jobs
+      - name: Save candidate tag
         id: meta
         run: echo "short_sha=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+
   acceptance:
     runs-on: ubuntu-latest
     needs: build-and-package
     steps:
       - uses: actions/checkout@v4
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-jar
+          path: target
       - name: Build candidate image
-        run: docker build -t app-candidate:latest .
+        run: docker build -t app-candidate:${{ needs.build-and-package.outputs.short_sha }} .
       - name: Run BLUE (stable) on 8080
-        run: docker run -d --name blue -p 8080:8080 app-candidate:latest || true
+        run: docker run -d --name blue -p 8080:8080 app-candidate:${{ needs.build-and-package.outputs.short_sha }} || true
       - name: Run GREEN (candidate) on 8081
-        run: docker run -d --name green -p 8081:8080 app-candidate:latest
+        run: docker run -d --name green -p 8081:8080 app-candidate:${{ needs.build-and-package.outputs.short_sha }}
       - name: Acceptance tests against GREEN
         run: curl --fail http://localhost:8081 || exit 1
-
-
 
   promote-or-rollback:
     runs-on: ubuntu-latest
     needs: acceptance
-    if: always()   
+    if: always()
     steps:
-      - name: Decide promotion / rollback
+      - name: Promote if GREEN passed
+        if: success()
         run: |
-          set -e
-          echo "CI status of acceptance: ${{ needs.acceptance.result }}"
-          if [ "${{ needs.acceptance.result }}" = "success" ]; then
-            echo "✅ Promoviendo GREEN -> BLUE (simulado)"
-            
-            docker stop app-blue || true
-            docker stop app-green || true
-            
-            echo "Promoción completada (simulada)."
-          else
-            echo "⛔ Acceptance falló. Manteniendo BLUE y descartando GREEN (rollback)."
-            docker stop app-green || true
-            
-          fi
+          echo "✅ Promoviendo GREEN -> BLUE"
+          docker stop blue || true
+          docker rm blue || true
+          docker rename green blue
+      - name: Rollback if GREEN failed
+        if: failure()
+        run: |
+          echo "⛔ GREEN falló, rollback al BLUE estable"
+          docker stop green || true
+          docker rm green || true

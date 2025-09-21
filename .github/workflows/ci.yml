@@ -51,19 +51,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Construir la imagen Docker con un tag único (SHA)
+      - name: Package JAR
+        run: mvn -B -U -ntp clean package -DskipTests
+
       - name: Build candidate image
         run: docker build -t $IMAGE_NAME:$VERSION .
 
-      # Simular despliegue Blue (estable) en puerto 8080
       - name: Run BLUE (stable) on 8080
         run: docker run -d -p 8080:8080 --name blue $IMAGE_NAME:$VERSION || true
 
-      # Simular despliegue Green (candidato) en puerto 8081
       - name: Run GREEN (candidate) on 8081
         run: docker run -d -p 8081:8080 --name green $IMAGE_NAME:$VERSION
 
-      # Ejecutar pruebas de aceptación contra GREEN
       - name: Acceptance tests against GREEN
         run: |
           echo "Probando entorno GREEN..."
@@ -82,7 +81,7 @@ jobs:
           echo "✅ GREEN pasó pruebas, promoviendo a producción (8080)..."
           docker stop blue || true
           docker rm blue || true
-          docker run -d -p 8080:8080 --name blue $IMAGE_NAME:$VERSION
+          docker rename green blue
 
       - name: Rollback if GREEN failed
         if: failure()
