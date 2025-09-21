@@ -1,18 +1,11 @@
-# Usa una imagen base con JDK para compilar
-FROM maven:3.9.6-eclipse-temurin-17 AS build
+# Imagen base de Java 17
+FROM openjdk:17-jdk-slim
 
-# Copia el código fuente al contenedor
-WORKDIR /app
-COPY . .
+# Copiar el JAR generado por Maven
+COPY target/*.jar app.jar
 
-# Compila y empaqueta con Maven (salida: target/*.jar)
-RUN mvn -B -U -ntp clean package
+# Exponer el puerto de la app
+EXPOSE 8080
 
-# Etapa final: usa JRE liviano para ejecutar
-FROM eclipse-temurin:17-jre
-
-# Copiamos el JAR generado de la etapa anterior
-COPY --from=build /app/target/*.jar /app/app.jar
-
-# Ejecutar la aplicación
-ENTRYPOINT ["java", "-jar", "/app/app.jar"]
+# Comando de inicio
+ENTRYPOINT ["java", "-jar", "app.jar"]
