@@ -8,7 +8,7 @@ RUN mvn -q -DskipTests package
 # ---------- run ----------
 FROM eclipse-temurin:17-jre-jammy
 WORKDIR /app
-# copiamos el único jar generado (SNAPSHOT o versionado)
+
 COPY --from=build /build/target/*.jar /app/app.jar
 EXPOSE 8080
 ENTRYPOINT ["java","-jar","/app/app.jar"]
