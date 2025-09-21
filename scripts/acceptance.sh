@@ -23,3 +23,4 @@ if [[ "$ACTUAL" != "$EXPECTED" ]]; then
 fi
 
 echo "[ACCEPTANCE] ✅ Aceptación OK"
+# 

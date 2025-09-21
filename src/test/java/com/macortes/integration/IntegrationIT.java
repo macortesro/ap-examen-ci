@@ -4,7 +4,7 @@ import com.macortes.App;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
-class IntegrationTest {
+class IntegrationIT {
 
     @Test
     void sumaYresta_combinadas() {

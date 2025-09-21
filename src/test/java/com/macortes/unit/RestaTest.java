@@ -1,6 +1,9 @@
-package com.macortes;
+package com.macortes.unit;
 
 import org.junit.jupiter.api.Test;
+
+import com.macortes.App;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class RestaTest {
